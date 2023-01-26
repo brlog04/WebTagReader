@@ -80,6 +80,31 @@ void readFile(fs::FS &fs, const char * path){
     file.close();
 }
 
+string readFileAndCreateJSON(fs::FS &fs, const char * path){
+    string strJson;
+    string dataRead;
+    Serial.printf("Reading file: %s\n", path);
+
+    File file = fs.open(path);
+    if(!file){
+        Serial.println("Failed to open file for reading");
+        return;
+    }
+
+    Serial.println("Read from file: ");
+    while(file.available()){
+        dataRead = file.read();
+        Serial.write(dataRead);
+        strJson = strJson +  "{\"tagId\":\""+dataRead+"\"},";
+    }
+    file.close();
+    
+    strJson.resize(strJson.length()-1);
+    strJson = "["+strJson+"]";
+    
+    return strJson;
+}
+
 void writeFile(fs::FS &fs, const char * path, const char * message){
     Serial.printf("Writing file: %s\n", path);
 
