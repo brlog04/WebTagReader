@@ -1,10 +1,15 @@
 #include <time.h> 
 #include <WiFi.h>
+#include <HTTPClient.h>
 #include "FS.h"
 #include "SPIFFS.h"
 
 const char* ssid     = "TMNT";
 const char* password = "20Darko08";
+
+const char* serverName = "http://boki.in.rs/getTagPost.php";
+//unsigned long lastTime = 0;
+//unsigned long timerDelay = 30000;
 
 long timezone = 1; 
 byte daysavetime = 1;
@@ -80,29 +85,40 @@ void readFile(fs::FS &fs, const char * path){
     file.close();
 }
 
-string readFileAndCreateJSON(fs::FS &fs, const char * path){
-    string strJson;
-    string dataRead;
+String readFileAndCreateJSON(fs::FS &fs, const char * path){
+    String strJson;
+    String dataRead;
     Serial.printf("Reading file: %s\n", path);
 
     File file = fs.open(path);
     if(!file){
         Serial.println("Failed to open file for reading");
-        return;
+        return "";
     }
 
     Serial.println("Read from file: ");
     while(file.available()){
-        dataRead = file.read();
-        Serial.write(dataRead);
+        //dataRead = file.read();
+        //Serial.println(dataRead);
+        dataRead =file.readStringUntil('\n');
         strJson = strJson +  "{\"tagId\":\""+dataRead+"\"},";
     }
     file.close();
+
+    Serial.println("strJson:");
+    Serial.println(strJson);
     
-    strJson.resize(strJson.length()-1);
-    strJson = "["+strJson+"]";
-    
-    return strJson;
+    //strJson.resize(strJson.length()-1);
+
+    String noviString = "";
+
+    for (int i = 0;i<(strJson.length()-1); i++){
+      noviString = noviString + strJson[i];
+    }
+    noviString = "["+noviString+"]";
+    Serial.println("noviString:");
+    Serial.println(noviString);
+    return noviString;
 }
 
 void writeFile(fs::FS &fs, const char * path, const char * message){
@@ -187,6 +203,7 @@ void setup(){
   Serial.println("Reading file");
   readFile(SPIFFS, "/tagdatafile.txt");
   Serial.println("Reading FINISHED");
+  sendRequest();
   deleteFile(SPIFFS, "/tagdatafile.txt");
   Serial.println("File DELETED");
 
@@ -194,7 +211,45 @@ void setup(){
   
 }
 
-void loop(){
+void sendRequest(){
+if(WiFi.status()== WL_CONNECTED){
+      Serial.println("sending request");
+      WiFiClient client;
+      HTTPClient http;
+    
+      // Your Domain name with URL path or IP address with path
+      http.begin(client, serverName);
+      
+      // If you need Node-RED/server authentication, insert user and password below
+      //http.setAuthorization("REPLACE_WITH_SERVER_USERNAME", "REPLACE_WITH_SERVER_PASSWORD");
+      
+      // Specify content-type header
+      //http.addHeader("Content-Type", "application/x-www-form-urlencoded");
+      // Data to send with HTTP POST
+      //String httpRequestData = "api_key=tPmAT5Ab3j7F9&sensor=BME280&value1=24.25&value2=49.54&value3=1005.14";           
+      // Send HTTP POST request
+      //int httpResponseCode = http.POST(httpRequestData);
+      
+      // If you need an HTTP request with a content type: application/json, use the following:
+      http.addHeader("Content-Type", "application/json");
+      //String httpRequestData = "{\"api_key\":\"tPmAT5Ab3j7F9\",\"sensor\":\"BME280\",\"value1\":\"24.25\",\"value2\":\"49.54\",\"value3\":\"1005.14\"}"
+      //String httpRequestData = "[{\"tag_id\":\"230112121301#2900940E97#\"},{\"tag_id\":\"230112121402#2900940E96#\"},{\"tag_id\":\"230112121503#2900940E95#\"}]";
+      String httpRequestData = readFileAndCreateJSON(SPIFFS, "/tagdatafile.txt");;
+      int httpResponseCode = http.POST(httpRequestData);
+
+      // If you need an HTTP request with a content type: text/plain
+      //http.addHeader("Content-Type", "text/plain");
+      //int httpResponseCode = http.POST("Hello, World!");
+     
+      Serial.print("HTTP Response code: ");
+      Serial.println(httpResponseCode);
+        
+      // Free resources
+      http.end();
+    }
+    else {
+      Serial.println("WiFi Disconnected");
+    }
 }
 
 String getDateTimeCoded(){
@@ -218,4 +273,7 @@ String addLeadingZero(String inpString){
   else
     retString = inpString;
   return retString;
+}
+
+void loop(){
 }
