@@ -107,17 +107,13 @@ String readFileAndCreateJSON(fs::FS &fs, const char * path){
 
     Serial.println("strJson:");
     Serial.println(strJson);
+        
+    // brisanje poslednjeg zareza 
+    strJson[strJson.length()-1] = ' ';
+    Serial.println("strJson bez zareza:");
+    Serial.println(strJson);
     
-    //strJson.resize(strJson.length()-1);
-
-    String noviString = "";
-
-    for (int i = 0;i<(strJson.length()-1); i++){
-      noviString = noviString + strJson[i];
-    }
-    noviString = "["+noviString+"]";
-    Serial.println("noviString:");
-    Serial.println(noviString);
+    
     return noviString;
 }
 
