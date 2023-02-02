@@ -110,11 +110,13 @@ String readFileAndCreateJSON(fs::FS &fs, const char * path){
         
     // brisanje poslednjeg zareza 
     strJson[strJson.length()-1] = ' ';
+    strJson = "["+strJson+"]";
     Serial.println("strJson bez zareza:");
     Serial.println(strJson);
     
     
-    return noviString;
+    
+    return strJson;
 }
 
 void writeFile(fs::FS &fs, const char * path, const char * message){
@@ -142,7 +144,8 @@ void appendFile(fs::FS &fs, const char * path, const char * message){
         return;
     }
     if(file.print(message)){
-        Serial.println("Message appended");
+        Serial.print("Message appended: ");
+        Serial.println(message);
     } else {
         Serial.println("Append failed");
     }
@@ -185,12 +188,15 @@ void setup(){
     Serial.println("IP address: ");
     Serial.println(WiFi.localIP());
     Serial.println("Contacting Time Server");
-  configTime(3600*timezone, daysavetime*3600, "time.nist.gov", "0.pool.ntp.org", "1.pool.ntp.org");
+    configTime(3600*timezone, daysavetime*3600, "time.nist.gov", "0.pool.ntp.org", "1.pool.ntp.org");
 
   if(!SPIFFS.begin()){
     Serial.println("Card Mount Failed");
     return;
   }
+  delay(5000);
+  Serial.print("Datum: ");
+  Serial.println(getDateTimeCoded());
   for (int i=0;i<100;i++){  
     String dataForFile = getDateTimeCoded() + "#" + String(esp_random()) + "#\n";
     appendFile(SPIFFS, "/tagdatafile.txt", dataForFile.c_str());
