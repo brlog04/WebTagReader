@@ -14,6 +14,7 @@ const char* serverName = "http://boki.in.rs/getTagPost.php";
 long timezone = 1; 
 byte daysavetime = 1;
 
+/*-----------------------------------------------------------------------------*/
 void listDir(fs::FS &fs, const char * dirname, uint8_t levels){
     Serial.printf("Listing directory: %s\n", dirname);
 
@@ -51,6 +52,7 @@ void listDir(fs::FS &fs, const char * dirname, uint8_t levels){
     }
 }
 
+/*-----------------------------------------------------------------------------*/
 void createDir(fs::FS &fs, const char * path){
     Serial.printf("Creating Dir: %s\n", path);
     if(fs.mkdir(path)){
@@ -60,6 +62,7 @@ void createDir(fs::FS &fs, const char * path){
     }
 }
 
+/*-----------------------------------------------------------------------------*/
 void removeDir(fs::FS &fs, const char * path){
     Serial.printf("Removing Dir: %s\n", path);
     if(fs.rmdir(path)){
@@ -69,6 +72,7 @@ void removeDir(fs::FS &fs, const char * path){
     }
 }
 
+/*-----------------------------------------------------------------------------*/
 void readFile(fs::FS &fs, const char * path){
     Serial.printf("Reading file: %s\n", path);
 
@@ -85,6 +89,7 @@ void readFile(fs::FS &fs, const char * path){
     file.close();
 }
 
+/*-----------------------------------------------------------------------------*/
 String readFileAndCreateJSON(fs::FS &fs, const char * path){
     String strJson;
     String dataRead;
@@ -119,6 +124,7 @@ String readFileAndCreateJSON(fs::FS &fs, const char * path){
     return strJson;
 }
 
+/*-----------------------------------------------------------------------------*/
 void writeFile(fs::FS &fs, const char * path, const char * message){
     Serial.printf("Writing file: %s\n", path);
 
@@ -135,6 +141,7 @@ void writeFile(fs::FS &fs, const char * path, const char * message){
     file.close();
 }
 
+/*-----------------------------------------------------------------------------*/
 void appendFile(fs::FS &fs, const char * path, const char * message){
     Serial.printf("Appending to file: %s\n", path);
 
@@ -152,6 +159,7 @@ void appendFile(fs::FS &fs, const char * path, const char * message){
     file.close();
 }
 
+/*-----------------------------------------------------------------------------*/
 void renameFile(fs::FS &fs, const char * path1, const char * path2){
     Serial.printf("Renaming file %s to %s\n", path1, path2);
     if (fs.rename(path1, path2)) {
@@ -161,6 +169,7 @@ void renameFile(fs::FS &fs, const char * path1, const char * path2){
     }
 }
 
+/*-----------------------------------------------------------------------------*/
 void deleteFile(fs::FS &fs, const char * path){
     Serial.printf("Deleting file: %s\n", path);
     if(fs.remove(path)){
@@ -170,6 +179,74 @@ void deleteFile(fs::FS &fs, const char * path){
     }
 }
 
+/*-----------------------------------------------------------------------------*/
+void sendRequest(){
+if(WiFi.status()== WL_CONNECTED){
+      Serial.println("sending request");
+      WiFiClient client;
+      HTTPClient http;
+    
+      // Your Domain name with URL path or IP address with path
+      http.begin(client, serverName);
+      
+      // If you need Node-RED/server authentication, insert user and password below
+      //http.setAuthorization("REPLACE_WITH_SERVER_USERNAME", "REPLACE_WITH_SERVER_PASSWORD");
+      
+      // Specify content-type header
+      //http.addHeader("Content-Type", "application/x-www-form-urlencoded");
+      // Data to send with HTTP POST
+      //String httpRequestData = "api_key=tPmAT5Ab3j7F9&sensor=BME280&value1=24.25&value2=49.54&value3=1005.14";           
+      // Send HTTP POST request
+      //int httpResponseCode = http.POST(httpRequestData);
+      
+      // If you need an HTTP request with a content type: application/json, use the following:
+      http.addHeader("Content-Type", "application/json");
+      //String httpRequestData = "{\"api_key\":\"tPmAT5Ab3j7F9\",\"sensor\":\"BME280\",\"value1\":\"24.25\",\"value2\":\"49.54\",\"value3\":\"1005.14\"}"
+      //String httpRequestData = "[{\"tag_id\":\"230112121301#2900940E97#\"},{\"tag_id\":\"230112121402#2900940E96#\"},{\"tag_id\":\"230112121503#2900940E95#\"}]";
+      String httpRequestData = readFileAndCreateJSON(SPIFFS, "/tagdatafile.txt");;
+      int httpResponseCode = http.POST(httpRequestData);
+
+      // If you need an HTTP request with a content type: text/plain
+      //http.addHeader("Content-Type", "text/plain");
+      //int httpResponseCode = http.POST("Hello, World!");
+     
+      Serial.print("HTTP Response code: ");
+      Serial.println(httpResponseCode);
+        
+      // Free resources
+      http.end();
+    }
+    else {
+      Serial.println("WiFi Disconnected");
+    }
+}
+
+/*-----------------------------------------------------------------------------*/
+String getDateTimeCoded(){
+  struct tm tmstruct ;
+  tmstruct.tm_year = 0;
+  getLocalTime(&tmstruct, 5000);
+  String timeCoded = String(tmstruct.tm_year - 100) + 
+                      addLeadingZero(String(( tmstruct.tm_mon)+1 )) + 
+                      addLeadingZero(String(tmstruct.tm_mday)) +
+                      addLeadingZero(String(tmstruct.tm_hour)) +
+                      addLeadingZero(String(tmstruct.tm_min)) +
+                      addLeadingZero(String(tmstruct.tm_sec)) ;
+  
+  return timeCoded;
+}
+
+/*-----------------------------------------------------------------------------*/
+String addLeadingZero(String inpString){
+  String retString;
+  if (inpString.length() == 1)
+    retString =  "0"+inpString;
+  else
+    retString = inpString;
+  return retString;
+}
+
+/*-----------------------------------------------------------------------------*/
 void setup(){
     Serial.begin(115200);
     // We start by connecting to a WiFi network
@@ -213,69 +290,6 @@ void setup(){
   
 }
 
-void sendRequest(){
-if(WiFi.status()== WL_CONNECTED){
-      Serial.println("sending request");
-      WiFiClient client;
-      HTTPClient http;
-    
-      // Your Domain name with URL path or IP address with path
-      http.begin(client, serverName);
-      
-      // If you need Node-RED/server authentication, insert user and password below
-      //http.setAuthorization("REPLACE_WITH_SERVER_USERNAME", "REPLACE_WITH_SERVER_PASSWORD");
-      
-      // Specify content-type header
-      //http.addHeader("Content-Type", "application/x-www-form-urlencoded");
-      // Data to send with HTTP POST
-      //String httpRequestData = "api_key=tPmAT5Ab3j7F9&sensor=BME280&value1=24.25&value2=49.54&value3=1005.14";           
-      // Send HTTP POST request
-      //int httpResponseCode = http.POST(httpRequestData);
-      
-      // If you need an HTTP request with a content type: application/json, use the following:
-      http.addHeader("Content-Type", "application/json");
-      //String httpRequestData = "{\"api_key\":\"tPmAT5Ab3j7F9\",\"sensor\":\"BME280\",\"value1\":\"24.25\",\"value2\":\"49.54\",\"value3\":\"1005.14\"}"
-      //String httpRequestData = "[{\"tag_id\":\"230112121301#2900940E97#\"},{\"tag_id\":\"230112121402#2900940E96#\"},{\"tag_id\":\"230112121503#2900940E95#\"}]";
-      String httpRequestData = readFileAndCreateJSON(SPIFFS, "/tagdatafile.txt");;
-      int httpResponseCode = http.POST(httpRequestData);
-
-      // If you need an HTTP request with a content type: text/plain
-      //http.addHeader("Content-Type", "text/plain");
-      //int httpResponseCode = http.POST("Hello, World!");
-     
-      Serial.print("HTTP Response code: ");
-      Serial.println(httpResponseCode);
-        
-      // Free resources
-      http.end();
-    }
-    else {
-      Serial.println("WiFi Disconnected");
-    }
-}
-
-String getDateTimeCoded(){
-  struct tm tmstruct ;
-  tmstruct.tm_year = 0;
-  getLocalTime(&tmstruct, 5000);
-  String timeCoded = String(tmstruct.tm_year - 100) + 
-                      addLeadingZero(String(( tmstruct.tm_mon)+1 )) + 
-                      addLeadingZero(String(tmstruct.tm_mday)) +
-                      addLeadingZero(String(tmstruct.tm_hour)) +
-                      addLeadingZero(String(tmstruct.tm_min)) +
-                      addLeadingZero(String(tmstruct.tm_sec)) ;
-  
-  return timeCoded;
-}
-
-String addLeadingZero(String inpString){
-  String retString;
-  if (inpString.length() == 1)
-    retString =  "0"+inpString;
-  else
-    retString = inpString;
-  return retString;
-}
-
+/*-----------------------------------------------------------------------------*/
 void loop(){
 }
